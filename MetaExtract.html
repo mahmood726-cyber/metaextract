@@ -160,7 +160,7 @@ function renderResults(results){
 function renderHighlight(text,results){
   const card=document.getElementById('highlightCard');const area=document.getElementById('highlightArea');
   card.style.display='';
-  let html=escapeHtml(text);
+  let html=escapeHtml(normalize(text));
   /* Highlight matched spans (process in reverse order to preserve positions) */
   const sorted=[...results].sort((a,b)=>b.charStart-a.charStart);
   for(const r of sorted){
@@ -206,14 +206,14 @@ async function fetchNCT(){
 
 /* ── Export ── */
 function copyJSON(){
-  navigator.clipboard.writeText(JSON.stringify(lastResults,null,2)).then(()=>alert('JSON copied'));
+  navigator.clipboard.writeText(JSON.stringify(lastResults,null,2)).then(()=>alert('JSON copied')).catch(()=>alert('Copy failed'));
 }
 function copyCSV(){
   let csv='Type,Value,CI_Lower,CI_Upper,P_Value,Confidence,Source\n';
   for(const r of lastResults){
     csv+=[r.effectType,r.effectType==='EVENTS'?r.tE+'/'+r.tN:r.value,r.ciLo??'',r.ciHi??'',r.pValue??'',r.tier,'"'+((r.sourceText??'').replace(/"/g,'""'))+'"'].join(',')+'\n';
   }
-  navigator.clipboard.writeText(csv).then(()=>alert('CSV copied'));
+  navigator.clipboard.writeText(csv).then(()=>alert('CSV copied')).catch(()=>alert('Copy failed'));
 }
 function copyForMA(){
   let text='# Effect estimates for meta-analysis\n# Extracted by MetaExtract v1.0\n\n';
@@ -221,7 +221,7 @@ function copyForMA(){
     if(r.effectType==='EVENTS')text+='Events: '+r.tE+'/'+r.tN+' vs '+r.cE+'/'+r.cN+'\n';
     else text+=r.effectType+' = '+r.value?.toFixed(3)+(r.ciLo!=null?' ('+r.ciLo.toFixed(3)+' to '+r.ciHi.toFixed(3)+')':'')+(r.pValue!=null?', p='+r.pValue.toFixed(4):'')+'\n';
   }
-  navigator.clipboard.writeText(text).then(()=>alert('Copied for meta-analysis'));
+  navigator.clipboard.writeText(text).then(()=>alert('Copied')).catch(()=>alert('Copy failed'));
 }
 </script>
 </body>
