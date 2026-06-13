@@ -36,13 +36,13 @@
 
 <div class="card">
   <div class="card-title">1. Paste Abstract or Results Text</div>
-  <textarea id="inputText" placeholder="Paste any abstract, results section, or CT.gov text here...
+  <textarea id="inputText" aria-label="Abstract or results text to extract effect estimates from" placeholder="Paste any abstract, results section, or CT.gov text here...
 
 Example: 'The hazard ratio for the primary composite endpoint was 0.77 (95% CI 0.61-0.96; P=0.02). Events occurred in 131/2366 (5.5%) colchicine vs 170/2379 (7.1%) placebo patients.'"></textarea>
   <div style="display:flex;gap:8px;margin-top:8px;">
     <button class="btn btn-primary" onclick="extract()">Extract All</button>
     <div style="flex:1;"></div>
-    <input id="nctInput" placeholder="Or enter NCT ID..." style="width:180px;">
+    <input id="nctInput" aria-label="ClinicalTrials.gov NCT identifier" placeholder="Or enter NCT ID..." style="width:180px;">
     <button class="btn btn-outline" onclick="fetchNCT()">Fetch CT.gov</button>
   </div>
 </div>

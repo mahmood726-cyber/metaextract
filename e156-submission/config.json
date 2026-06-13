@@ -3,7 +3,7 @@
   "slug": "metaextract-browser-effect-estimate-extraction",
   "author": "Mahmood Ahmad",
   "date": "2026-03-27",
-  "path": "C:\\Projects\\MetaExtract",
+  "path": "metaextract",
   "type": "methods",
   "primary_estimand": "Extraction sensitivity for HR, OR, RR (95% CI)",
   "certainty": "moderate",
