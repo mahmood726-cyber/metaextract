@@ -75,31 +75,33 @@ const normRx=new RegExp('['+Object.keys(NORM_MAP).join('')+']','g');
 function normalize(t){t=t.replace(normRx,ch=>NORM_MAP[ch]??ch);t=t.replace(/(?<!\.\d)(\d),(\d{1,2})(?!\d)/g,'$1.$2');t=t.replace(/(\d),\s*(95%?\s*CI)/gi,'$1; $2');t=t.replace(/\b(HR|OR|RR|MD|SMD|ARD|IRR|NNT|aHR|aOR)(\d)/g,'$1 $2');t=t.replace(/(?<![0-9])(-?)\.(\d)/g,'$10.$2');t=t.replace(/(\d)to(-?\d)/g,'$1 to $2');t=t.replace(/(\d)\((\d{2,3}%)/g,'$1 ($2');return t;}
 
 const N='(\\d+\\.?\\d*)',SN='(-?\\d+\\.?\\d*)',SEP='[-\\u2013\\u2014,]',TO='(?:to|[-\\u2013\\u2014])',CI='(?:95%?[\\s-]*)?(?:CI|KI|IC|BI|CrI)?';
+const BND='(?:\\s*'+SEP+'\\s*|\\s+to\\s+)';
 const RANGE={HR:[0.01,50],OR:[0.01,100],RR:[0.01,50],IRR:[0.01,50],MD:[-1e4,1e4],SMD:[-10,10],ARD:[-100,100],NNT:[1,1e4],GMR:[0.01,100]};
 function plausible(type,v,lo,hi){const r=RANGE[type]??[0.01,100];if(v<r[0]||v>r[1])return false;if(lo!=null&&hi!=null){if(lo>hi)return false;if(v<lo-0.001||v>hi+0.001)return false;if(['HR','OR','RR','IRR','GMR'].includes(type)&&lo<=0)return false;}return true;}
 
 const PATTERNS=[
-{rx:new RegExp('\\bHR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*(?:(?:IC|KI)\\s+)?'+CI+'[,:\\s]*'+N+'\\s*'+SEP+'\\s*'+N+'\\s*[\\)\\]]','i'),type:'HR'},
+{rx:new RegExp('\\bHR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*(?:(?:IC|KI)\\s+)?'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'HR'},
 {rx:new RegExp('\\bHR\\b[,;:\\s=]+'+N+'[;,]\\s*(?:95%?\\s*)?(?:CI|confidence\\s*interval)[,:\\s]+'+N+'\\s*'+TO+'\\s*'+N,'i'),type:'HR'},
-{rx:new RegExp('hazard\\s*ratio[,;:\\s=]+(?:was\\s+|of\\s+)?'+N+'\\s*\\(\\s*'+CI+'[,:\\s]*'+N+'\\s*'+TO+'\\s*'+N,'i'),type:'HR'},
+{rx:new RegExp('hazard\\s*ratio[,;:\\s=]+(?:[^.\\d]{0,60}?(?:was|of)\\s+)?'+N+'\\s*\\(\\s*'+CI+'[,:\\s]*'+N+'\\s*'+TO+'\\s*'+N,'i'),type:'HR'},
 {rx:new RegExp('\\(HR[,;]\\s*'+N+'[;,]\\s*(?:95%?\\s*)?CI[,:\\s]+'+N+'\\s*'+TO+'\\s*'+N+'\\)','i'),type:'HR'},
 {rx:new RegExp('\\bHR\\b\\s+'+N+'\\s*\\(\\s*'+N+'\\s*[-\\u2013\\u2014]\\s*'+N+'\\s*\\)','i'),type:'HR'},
-{rx:new RegExp('\\baHR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+'\\s*'+SEP+'\\s*'+N+'\\s*[\\)\\]]','i'),type:'HR'},
-{rx:new RegExp('\\bOR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+'\\s*'+SEP+'\\s*'+N+'\\s*[\\)\\]]','i'),type:'OR'},
+{rx:new RegExp('\\baHR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'HR'},
+{rx:new RegExp('\\bOR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'OR'},
 {rx:new RegExp('odds\\s*ratio[,;:\\s=]+(?:was\\s+)?'+N+'\\s*\\(\\s*'+CI+'[,:\\s]*'+N+'\\s*'+TO+'\\s*'+N,'i'),type:'OR'},
 {rx:new RegExp('\\bOR\\b\\s+'+N+'\\s*\\(\\s*'+N+'\\s*[-\\u2013\\u2014]\\s*'+N+'\\s*\\)','i'),type:'OR'},
 {rx:new RegExp('(?:incidence\\s+)?rate\\s*ratio[,;:\\s=]+'+N+'\\s*\\(\\s*'+CI+'[,:\\s]*'+N+'\\s*[-\\u2013\\u2014]\\s*'+N,'i'),type:'IRR'},
-{rx:new RegExp('\\bRR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+'\\s*'+SEP+'\\s*'+N+'\\s*[\\)\\]]','i'),type:'RR'},
+{rx:new RegExp('\\bIRR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'IRR'},
+{rx:new RegExp('\\bRR\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'RR'},
 {rx:new RegExp('relative\\s+risk[,;:\\s=]+(?:was\\s+)?'+N+'[;,]\\s*(?:95%?\\s*)?(?:CI|confidence)[,:\\s]+'+N+'\\s*'+TO+'\\s*'+N,'i'),type:'RR'},
 {rx:new RegExp('\\bRR\\b\\s+'+N+'\\s*\\(\\s*'+N+'\\s*[-\\u2013\\u2014]\\s*'+N+'\\s*\\)','i'),type:'RR'},
-{rx:new RegExp('\\bSMD\\b[,;:\\s=]+'+SN+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+SN+'\\s+to\\s+'+SN+'\\s*[\\)\\]]','i'),type:'SMD'},
-{rx:new RegExp('\\bMD\\b[,;:\\s=]+'+SN+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+SN+'\\s+to\\s+'+SN+'\\s*[\\)\\]]','i'),type:'MD'},
-{rx:new RegExp('mean\\s+difference[,;:\\s]+'+SN+'[;,]\\s*(?:95%?\\s*)?CI[,:\\s]+'+SN+'\\s+to\\s+'+SN,'i'),type:'MD'},
-{rx:new RegExp('\\bNNT\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+'\\s*'+SEP+'\\s*'+N+'\\s*[\\)\\]]','i'),type:'NNT'},
+{rx:new RegExp('\\bSMD\\b[,;:\\s=]+'+SN+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+SN+BND+SN+'\\s*[\\)\\]]','i'),type:'SMD'},
+{rx:new RegExp('\\bMD\\b[,;:\\s=]+'+SN+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+SN+BND+SN+'\\s*[\\)\\]]','i'),type:'MD'},
+{rx:new RegExp('mean\\s+difference[,;:\\s]+'+SN+'[;,]\\s*(?:95%?\\s*)?CI[,:\\s]+'+SN+BND+SN,'i'),type:'MD'},
+{rx:new RegExp('\\bNNT\\b[,;:\\s=]+'+N+'\\s*[\\(\\[]\\s*'+CI+'[,:\\s]*'+N+BND+N+'\\s*[\\)\\]]','i'),type:'NNT'},
 {rx:new RegExp('(?:absolute\\s+)?risk\\s+(?:difference|reduction)[,;:\\s=]+'+SN+'%?\\s*\\(\\s*'+CI+'[,:\\s]*'+SN+'%?\\s*'+TO+'\\s*'+SN+'%?','i'),type:'ARD'},
 ];
 
-const EVENT_RX=/(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?\s*(?:vs\.?|versus|compared\s+(?:to|with)|and)\s*(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?/gi;
+const EVENT_RX=/(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?\s*[^\d/()\n.;]{0,40}?(?:vs\.?|versus|compared\s+(?:to|with)|and)\s*(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?/gi;
 const P_RX=[{rx:/[Pp]\s*-?\s*value\s*([=<>])\s*(0?\.\d+)/gi},{rx:/[Pp]\s*([=<>])\s*(0?\.\d+)/g}];
 
 function extractAll(rawText){
