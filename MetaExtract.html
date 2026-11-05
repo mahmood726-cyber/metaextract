@@ -102,7 +102,7 @@ const PATTERNS=[
 ];
 
 const EVENT_RX=/(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?\s*[^\d/()\n.;]{0,40}?(?:vs\.?|versus|compared\s+(?:to|with)|and)\s*(\d+)\s*\/\s*(\d+)\s*(?:\(\s*\d+\.?\d*\s*%?\s*\))?/gi;
-const P_RX=[{rx:/[Pp]\s*-?\s*value\s*([=<>])\s*(0?\.\d+)/gi},{rx:/[Pp]\s*([=<>])\s*(0?\.\d+)/g}];
+const P_RX=[{rx:/[Pp]\s*-?\s*value\s*(<=|>=|[=<>])\s*(0?\.\d+)/gi},{rx:/[Pp]\s*(<=|>=|[=<>])\s*(0?\.\d+)/g}];
 
 function extractAll(rawText){
   if(!rawText||rawText.length<5)return[];
@@ -123,11 +123,21 @@ function extractAll(rawText){
   }
   /* P-values */
   for(const pp of P_RX){const rx=new RegExp(pp.rx.source,'gi');let pm;while((pm=rx.exec(text))!==null){
-    let pv=parseFloat(pm[2]);if(!isFinite(pv)||pv<0||pv>1)continue;if(pm[1]==='<')pv=Math.max(0,pv-0.0001);
+    const pv=Number(pm[2]);if(!Number.isFinite(pv)||pv<0||pv>1)continue;
     let best=null,bestDist=200;for(const r of results){const dist=pm.index-(r.charStart+r.sourceText.length);if(dist>=0&&dist<bestDist){bestDist=dist;best=r;}}
-    if(best&&best.pValue==null)best.pValue=pv;
+    if(best&&best.pValue==null){
+      // The numeric value is the reported threshold, NOT an inferred exact P.
+      best.pValue=pv;best.pOperator=pm[1];best.pLiteral=pm[2];
+    }
   }}
   results.sort((a,b)=>b.confidence-a.confidence||a.charStart-b.charStart);return results;
+}
+
+/* Preserve P inequalities and printed precision in every output format. */
+function pNotation(r,includeEquality=false){
+  if(r.pValue==null)return '';
+  const op=r.pOperator??'=';
+  return ((includeEquality||op!=='=')?op:'')+(r.pLiteral??String(r.pValue));
 }
 
 /* ── Main Extract ── */
@@ -150,9 +160,9 @@ function renderResults(results){
     const badge=r.tier==='AUTO_VERIFIED'?'badge-green':r.tier==='SPOT_CHECK'?'badge-amber':'badge-red';
     const valStr=r.effectType==='EVENTS'?r.tE+'/'+r.tN+' vs '+r.cE+'/'+r.cN:r.value?.toFixed(3)??'-';
     const ciStr=r.ciLo!=null?r.ciLo.toFixed(3)+' to '+r.ciHi.toFixed(3):'-';
-    const pStr=r.pValue!=null?(r.pValue<0.001?'<0.001':r.pValue.toFixed(3)):'-';
+    const pStr=r.pValue!=null?pNotation(r):'-';
     html+='<tr><td style="font-weight:700;">'+escapeHtml(r.effectType)+'</td><td style="font-weight:600;color:var(--accent);">'+valStr+'</td>';
-    html+='<td>'+ciStr+'</td><td>'+pStr+'</td>';
+    html+='<td>'+ciStr+'</td><td>'+escapeHtml(pStr)+'</td>';
     html+='<td><span class="badge '+badge+'">'+escapeHtml(r.tier)+'</span></td>';
     html+='<td style="max-width:200px;font-size:0.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">'+escapeHtml(r.sourceText?.substring(0,80)??'')+'</td></tr>';
   }
@@ -213,7 +223,7 @@ function copyJSON(){
 function copyCSV(){
   let csv='Type,Value,CI_Lower,CI_Upper,P_Value,Confidence,Source\n';
   for(const r of lastResults){
-    csv+=[r.effectType,r.effectType==='EVENTS'?r.tE+'/'+r.tN:r.value,r.ciLo??'',r.ciHi??'',r.pValue??'',r.tier,'"'+((r.sourceText??'').replace(/"/g,'""'))+'"'].join(',')+'\n';
+    csv+=[r.effectType,r.effectType==='EVENTS'?r.tE+'/'+r.tN:r.value,r.ciLo??'',r.ciHi??'',pNotation(r),r.tier,'"'+((r.sourceText??'').replace(/"/g,'""'))+'"'].join(',')+'\n';
   }
   navigator.clipboard.writeText(csv).then(()=>alert('CSV copied')).catch(()=>alert('Copy failed'));
 }
@@ -221,7 +231,7 @@ function copyForMA(){
   let text='# Effect estimates for meta-analysis\n# Extracted by MetaExtract v1.0\n\n';
   for(const r of lastResults){
     if(r.effectType==='EVENTS')text+='Events: '+r.tE+'/'+r.tN+' vs '+r.cE+'/'+r.cN+'\n';
-    else text+=r.effectType+' = '+r.value?.toFixed(3)+(r.ciLo!=null?' ('+r.ciLo.toFixed(3)+' to '+r.ciHi.toFixed(3)+')':'')+(r.pValue!=null?', p='+r.pValue.toFixed(4):'')+'\n';
+    else text+=r.effectType+' = '+r.value?.toFixed(3)+(r.ciLo!=null?' ('+r.ciLo.toFixed(3)+' to '+r.ciHi.toFixed(3)+')':'')+(r.pValue!=null?', p'+pNotation(r,true):'')+'\n';
   }
   navigator.clipboard.writeText(text).then(()=>alert('Copied')).catch(()=>alert('Copy failed'));
 }
